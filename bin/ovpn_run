@@ -1,0 +1,167 @@
+#!/bin/bash
+
+if [[ "$EUID" -ne 0 ]]; then
+	echo "Sorry, you need to run this as root"
+	exit 1
+fi
+
+if [[ ! -e /dev/net/tun ]]; then
+	echo "TUN is not available"
+	exit 2
+fi
+
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+
+if [[ ! -e /etc/openvpn/server.conf ]]; then
+
+	OS="debian"
+	# Getting the version number, to verify that a recent version of OpenVPN is available
+	VERSION_ID=$(cat /etc/os-release | grep "VERSION_ID")
+	RCLOCAL='/etc/rc.local'
+
+	# Try to get our IP from the system and fallback to the Internet.
+	# I do this to make the script compatible with NATed servers (LowEndSpirit/Scaleway)
+	# and to avoid getting an IPv6.
+
+	IP=$(wget -qO- ipv4.icanhazip.com)
+
+	cd /etc/openvpn
+	mkdir client
+			
+		# Find out if the machine uses nogroup or nobody for the permissionless group
+	if grep -qs "^nogroup:" /etc/group; then
+	        NOGROUP=nogroup
+	else
+	    	NOGROUP=nobody
+	fi
+
+	# Generate server.conf
+	echo "port 1194" > /etc/openvpn/server.conf
+	echo "proto udp" >> /etc/openvpn/server.conf
+	echo "dev tun
+	user nobody
+	group $NOGROUP
+	persist-key
+	persist-tun
+	keepalive 10 120
+	topology subnet
+	server 10.8.0.0 255.255.255.0
+	ifconfig-pool-persist ipp.txt" >> /etc/openvpn/server.conf
+	# DNS resolvers
+	case $DNS in
+		1)
+		# Obtain the resolvers from resolv.conf and use them for OpenVPN
+		grep -v '#' /etc/resolv.conf | grep 'nameserver' | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | while read line; do
+			echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server.conf
+		done
+		;;
+		2) #FDN
+		echo 'push "dhcp-option DNS 80.67.169.12"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 80.67.169.40"' >> /etc/openvpn/server.conf
+		;;
+		3) #DNS.WATCH
+		echo 'push "dhcp-option DNS 84.200.69.80"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 84.200.70.40"' >> /etc/openvpn/server.conf
+		;;
+		4) #OpenDNS
+		echo 'push "dhcp-option DNS 208.67.222.222"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 208.67.220.220"' >> /etc/openvpn/server.conf
+		;;
+		5) #Google
+		echo 'push "dhcp-option DNS 8.8.8.8"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 8.8.4.4"' >> /etc/openvpn/server.conf
+		;;
+	esac
+	echo 'push "redirect-gateway def1 bypass-dhcp" '>> /etc/openvpn/server.conf
+	echo "crl-verify crl.pem
+	ca ca.crt
+	cert server.crt
+	key server.key
+	tls-auth tls-auth.key 0
+	dh dh.pem
+	auth SHA256
+	$CIPHER
+	tls-server
+	tls-version-min 1.2
+	tls-cipher TLS-DHE-RSA-WITH-AES-128-GCM-SHA256
+	status openvpn.log
+	verb 3" >> /etc/openvpn/server.conf
+
+
+	# Avoid an unneeded reboot
+	# Set NAT for the VPN subnet
+	iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -j SNAT --to $IP
+	sed -i "1 a\iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -j SNAT --to $IP" $RCLOCAL
+	if iptables -L -n | grep -qE 'REJECT|DROP'; then
+		# If iptables has at least one REJECT rule, we asume this is needed.
+		# Not the best approach but I can't think of other and this shouldn't
+		# cause problems.
+		iptables -I INPUT -p udp --dport 1194 -j ACCEPT
+		iptables -I FORWARD -s 10.8.0.0/24 -j ACCEPT
+		iptables -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT
+		sed -i "1 a\iptables -I INPUT -p udp --dport $PORT -j ACCEPT" $RCLOCAL
+		sed -i "1 a\iptables -I FORWARD -s 10.8.0.0/24 -j ACCEPT" $RCLOCAL
+		sed -i "1 a\iptables -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT" $RCLOCAL
+	fi
+
+	# client-template.txt is created so we have a template to add further users later
+	echo "client" > /etc/openvpn/client-template.txt
+	echo "proto udp" >> /etc/openvpn/client-template.txt
+	echo "remote $IP 1194
+	dev tun
+	resolv-retry infinite
+	nobind
+	persist-key
+	persist-tun
+	remote-cert-tls server
+	auth SHA256
+	$CIPHER
+	tls-client
+	tls-version-min 1.2
+	tls-cipher TLS-DHE-RSA-WITH-AES-128-GCM-SHA256
+	setenv opt block-outside-dns
+	verb 3" >> /etc/openvpn/client-template.txt
+fi
+
+if [[ ! -d /cert/easy-rsa/ ]]; then
+	# An old version of easy-rsa was available by default in some openvpn packages
+	if [[ -d /etc/openvpn/easy-rsa/ ]]; then
+		rm -rf /etc/openvpn/easy-rsa/
+	fi
+	# Get easy-rsa
+	wget -O ~/EasyRSA-3.0.1.tgz https://github.com/OpenVPN/easy-rsa/releases/download/3.0.1/EasyRSA-3.0.1.tgz
+	tar xzf ~/EasyRSA-3.0.1.tgz -C ~/
+	mv ~/EasyRSA-3.0.1/ /cert/
+	mv /cert/EasyRSA-3.0.1/ /cert/easy-rsa/
+	chown -R root:root /cert/easy-rsa/
+	rm -rf ~/EasyRSA-3.0.1.tgz
+	cd /cert/easy-rsa/
+	echo "set_var EASYRSA_KEY_SIZE $RSA_KEY_SIZE" > vars
+	# Create the PKI, set up the CA, the DH params and the server + client certificates
+	./easyrsa init-pki
+	./easyrsa --batch build-ca nopass
+	openssl dhparam $DH_KEY_SIZE -out dh.pem
+	./easyrsa build-server-full server nopass
+	./easyrsa build-client-full $CLIENT nopass
+	./easyrsa gen-crl
+	# generate tls-auth key
+	openvpn --genkey --secret /cert/tls-auth.key
+	# Move all the generated files
+	cp pki/ca.crt pki/private/ca.key dh.pem pki/issued/server.crt pki/private/server.key /cert/easy-rsa/pki/crl.pem /cert/tls-auth.key /etc/openvpn
+	# Make cert revocation list readable for non-root
+	chmod 644 /etc/openvpn/crl.pem
+fi
+
+
+iptables -A INPUT -i eth0 -m state --state NEW -p udp --dport 1194 -j ACCEPT
+iptables -A INPUT -i tun+ -j ACCEPT
+iptables -A FORWARD -i tun+ -j ACCEPT
+iptables -A FORWARD -i tun+ -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -A FORWARD -i eth0 -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT
+iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+iptables -A OUTPUT -o tun+ -j ACCEPT
+
+cd /root
+
+supervisord
