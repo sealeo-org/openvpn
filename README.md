@@ -61,8 +61,8 @@ TODO: LDAP Support
 
 ## Credits
 
-TODO: Write credits
+Credit to Nyr for his Road Warrior script : https://github.com/Nyr/openvpn-install
 
 ## License
 
-TODO: Write license
+Released under MIT license.
