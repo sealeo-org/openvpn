@@ -31,12 +31,19 @@ RSA_KEY_SIZE: [default: 2048]
 - Custom
 
 DNS: [default: 1]
- - 1 (resolv.conf)
- - 2 (#FDN)
- - 3 (#DNS.WATCH)
- - 4 (#OpenDNS)
- - 5 (#Google)
+- 1 (resolv.conf)
+- 2 (#FDN)
+- 3 (#DNS.WATCH)
+- 4 (#OpenDNS)
+- 5 (#Google)
     
+PROTOCOL: [default: udp]
+- udp
+- tcp
+
+EXTERNAL_PORT: [default: 1194]
+(value that will be set into client configuration files)
+ 
 ## Usage
 
 ```bash
