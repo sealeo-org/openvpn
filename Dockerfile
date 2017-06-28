@@ -1,8 +1,8 @@
 FROM debian:8
 
-LABEL maintainer="Cyrius"
+LABEL maintainer="Cyrius, Celforyon"
 LABEL version="1.0"
-LABEL description="Simple vpn using openvpn."
+LABEL description="Simple vpn server using openvpn."
 
 RUN echo "deb http://swupdate.openvpn.net/apt jessie main" > /etc/apt/sources.list.d/swupdate-openvpn.list
 
