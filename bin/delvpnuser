@@ -23,7 +23,8 @@ rm -rf pki/private/$CLIENT.key
 rm -rf pki/issued/$CLIENT.crt
 rm -rf /etc/openvpn/crl.pem
 cp /cert/easy-rsa/pki/crl.pem /etc/openvpn/crl.pem
-echo ""
+chmod 644 /etc/openvpn/crl.pem
+echo
 echo "Certificate for client $CLIENT revoked"
 echo "Exiting..."
-exit
+exit 0
