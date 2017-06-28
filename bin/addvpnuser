@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 newclient () {
 	# Generates the custom client.ovpn
