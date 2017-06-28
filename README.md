@@ -68,6 +68,8 @@ services:
     #- DH_KEY_SIZE=2048
     #- RSA_KEY_SIZE=2048
     #- DNS=1
+		#- PROTOCOL=udp
+		#- EXTERNAL_PORT=1194
     ports:
     - 1194:1194/udp
     cap_add:

@@ -19,14 +19,13 @@ IP=$(wget -qO- ipv4.icanhazip.com)
 SERVER_CONF=/etc/openvpn/server.conf
 CLIENT_TEMPLATE=/etc/openvpn/client-template.txt
 
-echo>$SERVER_CONF -n
-
 if [[ ! -e /etc/openvpn/server.conf ]]; then
 	cd /etc/openvpn
 	mkdir client
 			
 	grep -qs "^nogroup:" /etc/group && NOGROUP=nogroup || NOGROUP=nobody
 
+	echo>$SERVER_CONF -n
 	cat<<EOF>>$SERVER_CONF
 port 1194
 proto $PROTOCOL
