@@ -1,34 +1,33 @@
 #!/bin/bash
 
-newclient () {
+SERVER_CONF=/etc/openvpn/server.conf
+CLIENT_TEMPLATE=/etc/openvpn/client-template.txt
+
+newuser () {
+	CCF=/etc/openvpn/client/$1.ovpn
+
 	# Generates the custom client.ovpn
-	cp /etc/openvpn/client-template.txt /etc/openvpn/client/$1.ovpn
-	echo "<ca>" >> /etc/openvpn/client/$1.ovpn
-	cat /cert/easy-rsa/pki/ca.crt >> /etc/openvpn/client/$1.ovpn
-	echo "</ca>" >> /etc/openvpn/client/$1.ovpn
-	echo "<cert>" >> /etc/openvpn/client/$1.ovpn
-	cat /cert/easy-rsa/pki/issued/$1.crt >> /etc/openvpn/client/$1.ovpn
-	echo "</cert>" >> /etc/openvpn/client/$1.ovpn
-	echo "<key>" >> /etc/openvpn/client/$1.ovpn
-	cat /cert/easy-rsa/pki/private/$1.key >> /etc/openvpn/client/$1.ovpn
-	echo "</key>" >> /etc/openvpn/client/$1.ovpn
-	echo "key-direction 1" >> /etc/openvpn/client/$1.ovpn
-	echo "<tls-auth>" >> /etc/openvpn/client/$1.ovpn
-	cat /cert/tls-auth.key >> /etc/openvpn/client/$1.ovpn
-	echo "</tls-auth>" >> /etc/openvpn/client/$1.ovpn
+	cp $CLIENT_TEMPLATE $CCF 
+	echo>>$CCF "<ca>"
+	cat >>$CCF /cert/easy-rsa/pki/ca.crt
+	echo>>$CCF "</ca>"
+	echo>>$CCF "<cert>"
+	cat >>$CCF /cert/easy-rsa/pki/issued/$1.crt
+	echo>>$CCF "</cert>"
+	echo>>$CCF "<key>"
+	cat >>$CCF /cert/easy-rsa/pki/private/$1.key
+	echo>>$CCF "</key>"
+	echo>>$CCF "key-direction 1"
+	echo>>$CCF "<tls-auth>"
+	cat >>$CCF /cert/tls-auth.key
+	echo>>$CCF "</tls-auth>"
 }
 
-
-if [[ -e /etc/openvpn/server.conf ]]; then
-	echo ""
-	echo "Tell me a name for the client cert"
-	echo "Please, use one word only, no special characters"
-	read -p "Client name: " -e -i client CLIENT
+if [[ -e $SERVER_CONF ]]; then
+	CLIENT=$1
+	[[ -z "$CLIENT" ]] && read -p "username (neither special char nor spaces): " CLIENT
 	cd /cert/easy-rsa/
 	./easyrsa build-client-full $CLIENT nopass
-	# Generates the custom client.ovpn
-	newclient "$CLIENT"
-	echo ""
-	echo "Client $CLIENT added, certs available at ~/$CLIENT.ovpn"
-	exit
+	newuser "$CLIENT"
+	echo "user $CLIENT added, certs available at .../etc/openvpn/client/$CLIENT.ovpn"
 fi
