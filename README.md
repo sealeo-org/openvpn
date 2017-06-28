@@ -1,12 +1,15 @@
-# Project Name
+# Docker OpenVPN
 
-This is a  simple docker container that allow to run an openvpn server with strong cipher if you want it.
+A docker container to run a configurable openvpn server
 
 ## Installation
 
-    docker run -d --cap-add=NET_ADMIN --privileged -v openvpn_folder:/etc/openvpn -v certificate_folder:/cert -e CIPHER="cipher AES-256-CBC" -e DH_KEY_SIZE="2048" -e RSA_KEY_SIZE="2048" -e DNS=1 -p 1194:1194/udp sealeo/openvpn
+```bash
+docker run -d --cap-add=NET_ADMIN --device /dev/net/tun -v openvpn_folder:/etc/openvpn -v certificate_folder:/cert -p 1194:1194/udp sealeo/openvpn
+```
 
-CIPHER :
+### Environments
+CIPHER: [default: cipher AES-256-CBC]
 - cipher AES-128-CBC
 - cipher AES-192-CBC
 - cipher AES-256-CBC
@@ -15,49 +18,68 @@ CIPHER :
 - cipher CAMELLIA-256-CBC
 - cipher SEED-CBC
 
-DH_KEY_SIZE : 
+DH_KEY_SIZE: [default: 2048]
 - 2048
 - 3072
 - 4096
 - Custom
 
-RSA_KEY_SIZE : 
+RSA_KEY_SIZE: [default: 2048]
 - 2048
 - 3072
 - 4096
+- Custom
 
-DNS : 
- - 1 resolv.conf
- - 2 #FDN
- - 3 #DNS.WATCH
- - 4 #OpenDNS
- - 5 #Google
-
-It will take some time to generate all the keys and certficate the first time.
+DNS: [default: 1]
+ - 1 (resolv.conf)
+ - 2 (#FDN)
+ - 3 (#DNS.WATCH)
+ - 4 (#OpenDNS)
+ - 5 (#Google)
     
-TODO: Docker-Compose
-
 ## Usage
 
-    docker run -d --cap-add=NET_ADMIN --device /dev/net/tun  --privileged -v openvpn_folder:/etc/openvpn -v certificate_folder:/cert -p 1194:1194/udp sealeo/openvpn
+```bash
+docker run -d --cap-add=NET_ADMIN --device /dev/net/tun -v openvpn_folder:/etc/openvpn -v certificate_folder:/cert -p 1194:1194/udp sealeo/openvpn
+```
 
-### Creating a new user :
+## Docker Compose
 
-    docker exec sealeo/openvpn bash
-    addvpnuser
-    #follow the instruction
-    #The certificate will be available in the openvpn folder in the client subfolder
-    #Edit the 3rd line with the right port if you changed it
+```yaml
+version: '3'
+services:
+  vpn:
+    container_name: vpn
+    image: sealeo/openvpn
+    restart: always
+    network_mode: bridge
+    volumes:
+    - ./openvpn:/etc/openvpn
+    - ./cert:/cert
+    environment:
+    #- CIPHER=cipher AES-256-CBC
+    #- DH_KEY_SIZE=2048
+    #- RSA_KEY_SIZE=2048
+    #- DNS=1
+    ports:
+    - 1194:1194/udp
+    cap_add:
+    - NET_ADMIN
+    devices:
+    - /dev/net/tun 
+```
+
+### Creating a new user
+
+```bash
+docker exec sealeo/openvpn addvpnuser
+```
 
 ### Revoking a user
-    docker exec sealeo/openvpn bash
-    delvpnuser
 
-## History
-
-v 1.0 First Commit
-
-TODO: LDAP Support
+```bash
+docker exec sealeo/openvpn delvpnuser
+```
 
 ## Credits
 
