@@ -36,14 +36,14 @@ DNS: [default: 1]
 - 3 (#DNS.WATCH)
 - 4 (#OpenDNS)
 - 5 (#Google)
-    
+
 PROTOCOL: [default: udp]
 - udp
 - tcp
 
 EXTERNAL_PORT: [default: 1194]
 (value that will be set into client configuration files)
- 
+
 ## Usage
 
 ```bash
@@ -68,14 +68,14 @@ services:
     #- DH_KEY_SIZE=2048
     #- RSA_KEY_SIZE=2048
     #- DNS=1
-		#- PROTOCOL=udp
-		#- EXTERNAL_PORT=1194
+    #- PROTOCOL=udp
+    #- EXTERNAL_PORT=1194
     ports:
     - 1194:1194/udp
     cap_add:
     - NET_ADMIN
     devices:
-    - /dev/net/tun 
+    - /dev/net/tun
 ```
 
 ### Creating a new user
