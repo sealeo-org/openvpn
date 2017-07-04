@@ -81,13 +81,13 @@ services:
 ### Creating a new user
 
 ```bash
-docker exec sealeo/openvpn addvpnuser
+docker exec -it docker_name addvpnuser
 ```
 
 ### Revoking a user
 
 ```bash
-docker exec sealeo/openvpn delvpnuser
+docker exec -it docker_name delvpnuser
 ```
 
 ## Credits
