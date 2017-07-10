@@ -6,13 +6,18 @@ LABEL description="Simple vpn server using openvpn."
 
 RUN echo "deb http://swupdate.openvpn.net/apt jessie main" > /etc/apt/sources.list.d/swupdate-openvpn.list
 
-RUN apt-get update && apt-get install wget -y
+RUN apt-get update && apt-get install -y wget
 RUN wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add -
-RUN apt update && apt-get install -y openvpn iptables openssl ca-certificates curl
-RUN apt-get update && apt-get install -y supervisor
+RUN apt-get update && apt-get install -y \
+	ca-certificates \
+	iptables \
+	openssl \
+	openvpn \
+	supervisor \
+	&& rm -rf /var/lib/apt/lists/*
 	
-RUN echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf && \
-	wget -O ~/EasyRSA-3.0.1.tgz https://github.com/OpenVPN/easy-rsa/releases/download/3.0.1/EasyRSA-3.0.1.tgz && \
+RUN echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf 
+RUN wget -O ~/EasyRSA-3.0.1.tgz https://github.com/OpenVPN/easy-rsa/releases/download/3.0.1/EasyRSA-3.0.1.tgz && \
 	tar xzf ~/EasyRSA-3.0.1.tgz -C ~/ && \
 	mv ~/EasyRSA-3.0.1/ /etc/openvpn/ && \
 	mv /etc/openvpn/EasyRSA-3.0.1/ /etc/openvpn/easy-rsa/ && \
@@ -20,10 +25,11 @@ RUN echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.conf && \
 	rm -rf ~/EasyRSA-3.0.1.tgz && \
 	cd /etc/openvpn/easy-rsa/
 
+RUN apt-get purge -y wget
+
 VOLUME ["/etc/openvpn"]
 VOLUME ["/cert"]
 
-# Internally uses port 1194/udp, remap using `docker run -p 443:1194/tcp`
 EXPOSE 1194/udp
 
 ENV CIPHER="cipher AES-256-CBC"
