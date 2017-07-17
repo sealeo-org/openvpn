@@ -53,13 +53,12 @@ docker run -d --cap-add=NET_ADMIN --device /dev/net/tun -v openvpn_folder:/etc/o
 ## Docker Compose
 
 ```yaml
-version: '3'
+version: '2'
 services:
   vpn:
     container_name: vpn
     image: sealeo/openvpn
     restart: always
-    network_mode: bridge
     volumes:
     - ./openvpn:/etc/openvpn
     - ./cert:/cert
@@ -81,6 +80,8 @@ services:
 ### Creating a new user
 
 ```bash
+docker exec docker_name addvpnuser username
+# OR
 docker exec -it docker_name addvpnuser
 ```
 
