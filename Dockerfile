@@ -32,5 +32,5 @@ ENV EXTERNAL_PORT=1194
 
 ADD bin /usr/local/bin
 ADD ./supervisord.conf /root
-ADD EasyRSA-3.0.1.tgz /root/EasyRSA-3.0.1.tgz
+COPY EasyRSA-3.0.1.tgz /root
 CMD ovpn_run
